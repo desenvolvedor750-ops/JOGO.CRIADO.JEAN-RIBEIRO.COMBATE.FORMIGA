@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Combate às Formigas - Pinus 3D</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#172018;font-family:Arial,sans-serif;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+#hud{position:fixed;inset:0;pointer-events:none;color:white;padding:12px;display:flex;flex-direction:column;justify-content:space-between}
+.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.panel{background:#101912d9;border:1px solid #8ab36b66;border-radius:12px;padding:10px 13px;box-shadow:0 5px 20px #0006}
+h1{font-size:17px;margin:0 0 4px;color:#b7e08b}.sub{font-size:11px;color:#d5dfcc}
+.stats{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.stat{min-width:76px;text-align:center;background:#101912e8;border:1px solid #ffffff22;border-radius:10px;padding:8px}
+.stat b{display:block;font-size:18px;color:#f4d58b}.stat small{font-size:9px;color:#d2d9cc}
+.bottom{display:flex;justify-content:space-between;align-items:end;gap:12px}
+#dpad{display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:4px;pointer-events:auto}
+#dpad button,.actions button{border:1px solid #ffffff55;background:#18291de8;color:white;border-radius:11px;font-weight:bold;font-size:18px;touch-action:none}
+#dpad button:active,.actions button:active{background:#557a35}
+#up{grid-column:2}#left{grid-column:1;grid-row:2}#down{grid-column:2;grid-row:2}#right{grid-column:3;grid-row:2}
+.actions{display:flex;gap:8px;pointer-events:auto;align-items:end;flex-wrap:wrap;justify-content:end}
+.actions button{padding:13px 16px;font-size:12px}
+#spray{background:#1767a0;border-color:#8bc9ef;font-size:15px;padding:17px 20px}
+#message{position:fixed;left:50%;top:25%;transform:translateX(-50%);background:#111d;color:#fff;border:1px solid #a5cc75;border-radius:20px;padding:10px 16px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;text-align:center;max-width:85%}
+#start{position:fixed;inset:0;background:linear-gradient(#12251bdc,#0c130feF);display:flex;align-items:center;justify-content:center;padding:20px;color:white;z-index:5}
+.startbox{max-width:420px;width:100%;padding:25px;background:#101a14;border:1px solid #8ab36b77;border-radius:20px;text-align:center;box-shadow:0 20px 60px #0009}
+.startbox h2{color:#b7e08b;margin:0 0 8px;font-size:27px}.startbox p{font-size:13px;line-height:1.5;color:#d7dfd2}
+#play{background:#397b37;color:white;border:0;border-radius:12px;padding:15px 24px;font-weight:bold;font-size:16px;width:100%;margin-top:10px}
+.bar{height:7px;background:#334033;border-radius:8px;overflow:hidden;margin-top:5px}.bar span{display:block;height:100%;width:100%;background:#65b9e9}
+@media(max-width:600px){#hud{padding:7px}.panel{padding:7px 9px}h1{font-size:13px}.sub{font-size:9px}.stat{min-width:58px;padding:6px 4px}.stat b{font-size:15px}.stat small{font-size:8px}#dpad{grid-template-columns:40px 40px 40px;grid-template-rows:40px 40px 40px}.actions{gap:5px}.actions button{padding:10px;font-size:10px}#spray{font-size:12px;padding:13px}}
+</style>
+</head>
+<body>
+<div id="start"><div class="startbox"><h2>CONTROLE DE OLHEIROS · 10 FAZENDAS</h2><p>Talhão amplo de Pinus. Controle 50 olheiros pequenos em cada fazenda. As formigas são minúsculas e se movimentam junto às entradas.</p><p style="font-size:11px;color:#b9d2b2"><b>Sequência:</b> Araucária · Pinhal · Boa Vista · Santa Clara · São José · Horizonte · Bela Vista · São Pedro · Esperança · Vale Verde</p><p><b>Computador:</b> WASD ou setas para andar · Espaço para controlar o olheiro<br><b>Celular:</b> use as setas e o botão CONTROLAR OLHEIRO</p><button id="play">INICIAR JOGO</button></div></div>
+<div id="hud">
+ <div class="top">
+  <div class="panel"><h1>ÁREA FLORESTAL · PINUS</h1><div class="sub" id="farmName">FAZENDA 1/10 · FAZENDA ARAUCÁRIA</div><div class="sub">OBJETIVO: CONTROLAR 50 OLHEIROS PEQUENOS</div><div class="sub" id="status">Aproxime-se de cada olheiro pequeno e pressione CONTROLAR OLHEIRO para registrar o controle.</div></div>
+  <div class="stats">
+   <div class="stat"><b id="count">0/50</b><small>OLHEIROS CONTROLADOS</small></div>
+   <div class="stat"><b id="ants">50</b><small>OLHEIROS RESTANTES</small></div>
+   <div class="stat"><b id="tank">100</b><small>COSTAL %</small><div class="bar"><span id="tankbar"></span></div></div>
+  </div>
+ </div>
+ <div class="bottom">
+  <div id="dpad">
+   <button id="up">▲</button><button id="left">◀</button><button id="down">▼</button><button id="right">▶</button>
+  </div>
+  <div class="actions"><button id="refill">REABASTECER</button><button id="spray">CONTROLAR OLHEIRO</button><button id="nextFarm" style="display:none;background:#8b6326">PRÓXIMA FAZENDA ▶</button></div>
+ </div>
+</div>
+<div id="message"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>if(!window.THREE){document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"><\\/script>')}</script>
+<script>
+(() => {
+if(!window.THREE){document.body.innerHTML='<div style="color:white;background:#18251c;padding:30px;font:18px Arial">Não foi possível carregar o motor 3D. Conecte o computador ou celular à internet e abra o jogo novamente.</div>';return;}
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9db8a0); scene.fog=new THREE.Fog(0x9db8a0,65,180);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,450);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xe4f0df,0x57412b,1.45));
+const sun=new THREE.DirectionalLight(0xffedcf,1.35);sun.position.set(-25,40,20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
+const mat=(c,r=.9)=>new THREE.MeshStandardMaterial({color:c,roughness:r});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(260,260,80,80),mat(0x705c3e));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+// subtle ground texture patches
+for(let i=0;i<160;i++){let p=new THREE.Mesh(new THREE.CircleGeometry(.2+Math.random()*.8,7),mat([0x665337,0x806a48,0x5d5838][i%3]));p.rotation.x=-Math.PI/2;p.position.set((Math.random()-.5)*95,.012,(Math.random()-.5)*95);scene.add(p)}
+function pine(x,z,scale=.42){const g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.09,.13,1.0,7),mat(0x59402b));trunk.position.y=.5;g.add(trunk);for(let k=0;k<3;k++){let c=new THREE.Mesh(new THREE.ConeGeometry(.55-k*.08,1.25,7),mat(k===0?0x315c37:0x3c7040));c.position.y=.95+k*.48;g.add(c)}g.position.set(x,0,z);g.scale.setScalar(scale);g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});scene.add(g);return g}
+// rows of already established, small Pinus seedlings
+for(let row=-14;row<=14;row++){for(let col=-16;col<=16;col++){let x=col*4.8+(row%2)*.45,z=row*4.9-8;if(Math.abs(x)<7&&Math.abs(z)<8)continue;pine(x,z,.32+Math.random()*.13)}}
+// edge trees
+for(let i=0;i<130;i++){let a=Math.random()*Math.PI*2,r=82+Math.random()*30;pine(Math.cos(a)*r,Math.sin(a)*r,.8+Math.random()*.55)}
+// OPERADOR ORIGINAL DO CÓDIGO ENVIADO: mesmo colete laranja, calça azul-escura,
+ // chapéu de palha com faixa vermelha, luvas, botas e matraca. Costal adicionado nas costas.
+const player=new THREE.Group();scene.add(player);
+const matPants=mat(0x222e3c),matVest=mat(0xff6600),matReflective=mat(0xe0e0e0,.2),matSkin=mat(0xd2a382),
+ matStrawHat=mat(0xd4ac6e),matStrawRibbon=mat(0x8b0000),matBoots=mat(0x261c14),
+ matGloves=mat(0x3b4252),matBag=mat(0x3d2817),matCostal=mat(0x155b83),matCostalCap=mat(0xe7e7e7);
+function mesh(parent,geo,material,x=0,y=0,z=0){const o=new THREE.Mesh(geo,material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
+mesh(player,new THREE.CylinderGeometry(.22,.19,.35,16),matPants,0,1.05,0);
+mesh(player,new THREE.CylinderGeometry(.26,.22,.55,16),matVest,0,1.45,0);
+mesh(player,new THREE.CylinderGeometry(.262,.252,.08,16),matReflective,0,1.52,0);
+mesh(player,new THREE.BoxGeometry(.12,.12,.05),matVest,.1,1.45,.23);
+mesh(player,new THREE.CylinderGeometry(.23,.23,.08,16),matBoots,0,1.15,0);
+// cinto e suporte de mudas original
+const beltBottle=new THREE.Group();
+mesh(beltBottle,new THREE.CylinderGeometry(.08,.08,.22,12),mat(0x0055ff),0,0,0);
+mesh(beltBottle,new THREE.CylinderGeometry(.03,.03,.04,10),matCostalCap,0,.13,0);
+beltBottle.position.set(-.25,1.12,.05);beltBottle.rotation.z=.15;player.add(beltBottle);
+const seedBag=new THREE.Group();mesh(seedBag,new THREE.BoxGeometry(.32,.26,.32),matBag);
+const pineNeedleMat=mat(0x2e6f40);
+for(let bx=-.09;bx<=.09;bx+=.09)for(let bz=-.09;bz<=.09;bz+=.09)mesh(seedBag,new THREE.ConeGeometry(.032,.22,5),pineNeedleMat,bx,.18,bz);
+seedBag.position.set(.28,1.10,-.05);player.add(seedBag);
+// cabeça e chapéu de palha com faixa vermelha
+const headGroup=new THREE.Group();headGroup.position.set(0,1.82,0);player.add(headGroup);
+const headMesh=mesh(headGroup,new THREE.SphereGeometry(.15,16,16),matSkin);headMesh.scale.set(1,1.15,1);
+mesh(headGroup,new THREE.CylinderGeometry(.42,.42,.02,24),matStrawHat,0,.12,0);
+mesh(headGroup,new THREE.CylinderGeometry(.17,.2,.16,16),matStrawHat,0,.2,0);
+mesh(headGroup,new THREE.CylinderGeometry(.202,.202,.04,16),matStrawRibbon,0,.14,0);
+// pernas articuladas como no original
+const leftLegGroup=new THREE.Group();leftLegGroup.position.set(.12,.9,0);player.add(leftLegGroup);
+mesh(leftLegGroup,new THREE.CylinderGeometry(.09,.07,.75,12),matPants,0,-.375,0);
+mesh(leftLegGroup,new THREE.BoxGeometry(.12,.15,.24),matBoots,0,-.75,.04);
+const rightLegGroup=new THREE.Group();rightLegGroup.position.set(-.12,.9,0);player.add(rightLegGroup);
+mesh(rightLegGroup,new THREE.CylinderGeometry(.09,.07,.75,12),matPants,0,-.375,0);
+mesh(rightLegGroup,new THREE.BoxGeometry(.12,.15,.24),matBoots,0,-.75,.04);
+// braços articulados e luvas
+const leftArmGroup=new THREE.Group();leftArmGroup.position.set(.28,1.62,0);player.add(leftArmGroup);
+mesh(leftArmGroup,new THREE.CylinderGeometry(.065,.055,.55,12),matSkin,0,-.275,0);
+mesh(leftArmGroup,new THREE.SphereGeometry(.07,10,10),matGloves,0,-.55,0);
+const rightArmGroup=new THREE.Group();rightArmGroup.position.set(-.28,1.62,0);player.add(rightArmGroup);
+mesh(rightArmGroup,new THREE.CylinderGeometry(.065,.055,.55,12),matSkin,0,-.275,0);
+mesh(rightArmGroup,new THREE.SphereGeometry(.07,10,10),matGloves,0,-.55,0);
+// matraca do modelo original presa ao braço direito
+const matracaGroup=new THREE.Group(),steel=mat(0xc0d0e0,.2),red=mat(0xff2200),darkSteel=mat(0x111111,.2),rubber=mat(0x222222);
+mesh(matracaGroup,new THREE.CylinderGeometry(.022,.022,1,10),steel,-.035,.45,0);
+mesh(matracaGroup,new THREE.CylinderGeometry(.022,.022,1,10),steel,.035,.45,0);
+for(const x of [-.12,.12]){const h=mesh(matracaGroup,new THREE.CylinderGeometry(.035,.035,.18,10),rubber,x,.92,0);h.rotation.z=Math.PI/2;}
+const funnel=mesh(matracaGroup,new THREE.ConeGeometry(.16,.32,12,1,true),red,0,.72,0);funnel.rotation.x=Math.PI;
+const beakL=mesh(matracaGroup,new THREE.ConeGeometry(.055,.35,4),darkSteel,-.03,-.05,0);beakL.rotation.z=-.12;
+const beakR=mesh(matracaGroup,new THREE.ConeGeometry(.055,.35,4),darkSteel,.03,-.05,0);beakR.rotation.z=.12;
+matracaGroup.scale.set(.95,.95,.95);matracaGroup.position.set(0,-.92,.18);matracaGroup.rotation.set(.05,0,0);rightArmGroup.add(matracaGroup);
+// pulverizador costal adicionado sem alterar a aparência do operador original
+const costal=new THREE.Group();player.add(costal);
+mesh(costal,new THREE.BoxGeometry(.48,.68,.30),matCostal,0,1.55,-.31);
+mesh(costal,new THREE.CylinderGeometry(.09,.09,.12,12),matCostalCap,0,1.93,-.31);
+const costalBand=mat(0x20252a);
+for(const x of [-.23,.23]){const strap=mesh(costal,new THREE.BoxGeometry(.07,.72,.08),costalBand,x,1.56,-.12);strap.rotation.z=x*.45;}
+const hose=mesh(costal,new THREE.TorusGeometry(.18,.025,8,18,Math.PI),rubber,.28,1.42,-.12);hose.rotation.z=Math.PI/2;
+player.position.set(0,0,15);
+// Enquadramento inicial: mostra o operador e o talhão antes mesmo de iniciar.
+camera.position.set(0,12,36);camera.lookAt(0,1,5);
+
+// 50 pequenos olheiros distribuídos pelo talhão; cada um possui formigas minúsculas.
+const olheiros=[], ants=[];
+const earthMat=mat(0x765033),earthLight=mat(0x98704a),darkEarth=mat(0x21150e);
+const antMat=mat(0x21130d),antHead=mat(0x32190f);
+const leafMat=mat(0x4d8b32);
+const olheiroPositions=[];
+for(let i=0;i<50;i++){
+  const row=Math.floor(i/10),col=i%10;
+  const x=(col-4.5)*12.2+(row%2)*1.7+(Math.random()-.5)*2.2;
+  const z=(row-2)*18.5-5+(Math.random()-.5)*3.0;
+  olheiroPositions.push({x,z});
+}
+function createOlheiros(){
+  olheiros.length=0;ants.length=0;
+  for(let i=0;i<50;i++){
+    const pos=olheiroPositions[i],nest=new THREE.Group();
+    nest.position.set(pos.x,0,pos.z);scene.add(nest);
+    // Monte baixo e pequeno, com um único olheiro escuro e terra solta.
+    const mound=new THREE.Mesh(new THREE.SphereGeometry(.24,12,8),earthMat);
+    mound.scale.set(1.45,.48,1.05);mound.position.y=.105;mound.castShadow=true;nest.add(mound);
+    const entrance=new THREE.Mesh(new THREE.CircleGeometry(.065,10),darkEarth);
+    entrance.rotation.x=-Math.PI/2;entrance.position.set(.06,.116,.08);nest.add(entrance);
+    for(let k=0;k<7;k++){
+      const clod=new THREE.Mesh(new THREE.DodecahedronGeometry(.025+Math.random()*.025),k%2?earthMat:earthLight);
+      const a=Math.random()*Math.PI*2,r=.18+Math.random()*.22;
+      clod.position.set(Math.cos(a)*r,.025,Math.sin(a)*r);nest.add(clod);
+    }
+    olheiros.push({group:nest,done:false,index:i+1});
+    // Duas formigas minúsculas junto à entrada de cada olheiro.
+    for(let j=0;j<2;j++){
+      const ant=new THREE.Group();
+      const abdomen=new THREE.Mesh(new THREE.SphereGeometry(.105,7,5),antMat);
+      abdomen.scale.set(1.1,.7,1.2);abdomen.position.z=-.10;ant.add(abdomen);
+      const thorax=new THREE.Mesh(new THREE.SphereGeometry(.06,7,5),antHead);
+      thorax.position.z=.015;ant.add(thorax);
+      const head=new THREE.Mesh(new THREE.SphereGeometry(.065,7,5),antHead);
+      head.position.z=.12;ant.add(head);
+      for(const side of [-1,1])for(let leg=0;leg<3;leg++){
+        const l=new THREE.Mesh(new THREE.CylinderGeometry(.006,.004,.12,4),antMat);
+        l.position.set(side*.06,0,.06-leg*.07);l.rotation.z=side*.65;ant.add(l);
+      }
+      const leaf=new THREE.Mesh(new THREE.SphereGeometry(.10,7,5),leafMat);
+      leaf.scale.set(.5,.07,1.2);leaf.position.set(0,.09,.18);ant.add(leaf);
+      ant.scale.setScalar(.20);
+      ant.position.set(pos.x+(j?-.16:.16),.025,pos.z+(j?.14:-.12));
+      scene.add(ant);
+      ants.push({obj:ant,nest:i,angle:Math.random()*6.28,r:.22+Math.random()*.20,speed:.45+Math.random()*.5,alive:true});
+    }
+  }
+}
+createOlheiros();
+
+const farms=['FAZENDA ARAUCÁRIA','FAZENDA PINHAL','FAZENDA BOA VISTA','FAZENDA SANTA CLARA','FAZENDA SÃO JOSÉ','FAZENDA HORIZONTE','FAZENDA BELA VISTA','FAZENDA SÃO PEDRO','FAZENDA ESPERANÇA','FAZENDA VALE VERDE'];
+let farmIndex=0,controlledOlheiros=0,farmFinished=false;
+const keys={};let active=false,ammo=100,controlled=0,spraying=false,lastSpray=0;
+function toast(t){let e=document.getElementById('message');e.textContent=t;e.style.opacity=1;clearTimeout(toast.timer);toast.timer=setTimeout(()=>e.style.opacity=0,1800)}
+
+function updateHUD(){
+  const remaining=olheiros.filter(o=>!o.done).length;
+  document.getElementById('count').textContent=controlledOlheiros+'/50';
+  document.getElementById('ants').textContent=remaining;
+  document.getElementById('tank').textContent=ammo;
+  document.getElementById('tankbar').style.width=ammo+'%';
+  document.getElementById('farmName').textContent='FAZENDA '+(farmIndex+1)+'/10 · '+farms[farmIndex];
+  document.getElementById('status').textContent=farmFinished?'FAZENDA CONTROLADA · avance para a próxima': 'Localize os olheiros pequenos e controle os 50 pontos';
+}
+function spray(){
+ if(!active||ammo<=0||farmFinished)return;
+ if(performance.now()-lastSpray<180)return;
+ lastSpray=performance.now();ammo=Math.max(0,ammo-2);spraying=true;
+ setTimeout(()=>spraying=false,180);
+ // Só registra o olheiro quando o operador está próximo dele.
+ const available=olheiros.filter(o=>!o.done).map(o=>({o,d:Math.hypot(player.position.x-o.group.position.x,player.position.z-o.group.position.z)})).filter(v=>v.d<3.3).sort((a,b)=>a.d-b.d);
+ if(!available.length){toast('Chegue perto de um olheiro pequeno para controlar.');updateHUD();return;}
+ const target=available[0].o;target.done=true;controlledOlheiros++;
+ target.group.traverse(o=>{if(o.isMesh){o.material=mat(0x77705a);}});
+ // Formigas do olheiro controlado desaparecem da simulação.
+ ants.filter(a=>a.nest===target.index-1).forEach(a=>{a.alive=false;scene.remove(a.obj)});
+ toast('Olheiro '+target.index+'/50 controlado!');
+ if(controlledOlheiros>=50){
+   farmFinished=true;
+   toast(farms[farmIndex]+' CONTROLADA! Fazenda concluída.');
+   document.getElementById('nextFarm').style.display=farmIndex<9?'block':'none';
+   if(farmIndex===9)toast('PARABÉNS! AS 10 FAZENDAS FORAM CONTROLADAS!');
+ }
+ updateHUD();
+}
+function refill(){ammo=100;updateHUD();toast('Pulverizador costal reabastecido')}
+document.getElementById('spray').addEventListener('pointerdown',e=>{e.preventDefault();spray()});document.getElementById('refill').addEventListener('click',refill);
+
+document.getElementById('nextFarm').addEventListener('click',()=>{
+ if(!farmFinished||farmIndex>=9)return;
+ farmIndex++;controlledOlheiros=0;farmFinished=false;ammo=100;
+ // Keep the same forest environment and character; shift the new 50 inspection points to a new sector.
+ const shiftX=((farmIndex%5)-2)*8,shiftZ=(Math.floor(farmIndex/5)-.5)*10;
+ olheiros.forEach((o,i)=>{
+   o.done=false;
+   const pos=olheiroPositions[i];
+   o.group.position.set(pos.x+shiftX,0,pos.z+shiftZ);
+ });
+ ants.forEach(a=>{
+   a.alive=true;
+   const pos=olheiros[a.nest].group.position;
+   a.obj.position.set(pos.x+(Math.random()-.5)*.3,.025,pos.z+(Math.random()-.5)*.3);
+   if(!a.obj.parent)scene.add(a.obj);
+ });
+ player.position.set(olheiros[0].group.position.x-3,0,olheiros[0].group.position.z+3);
+ document.getElementById('nextFarm').style.display='none';
+ toast('Iniciando '+farms[farmIndex]+'. Controle os 50 olheiros!');
+ updateHUD();
+});
+document.getElementById('play').onclick=()=>{document.getElementById('start').style.display='none';active=true;toast('Percorra o talhão, encontre as trilhas de formigas e controle toda a área')};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.code==='Space'){e.preventDefault();spray()}});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+function bind(id,key){let b=document.getElementById(id);b.addEventListener('pointerdown',e=>{e.preventDefault();keys[key]=true;b.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys[key]=false))}
+bind('up','w');bind('down','s');bind('left','a');bind('right','d');
+const clock=new THREE.Clock();
+function loop(){requestAnimationFrame(loop);let dt=Math.min(clock.getDelta(),.04);
+ if(active){let forward=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0),side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);let len=Math.hypot(forward,side);if(len){forward/=len;side/=len;const gait=performance.now()*.012;leftLegGroup.rotation.x=Math.sin(gait)*.55;rightLegGroup.rotation.x=-Math.sin(gait)*.55;leftArmGroup.rotation.x=-Math.sin(gait)*.25;rightArmGroup.rotation.x=Math.sin(gait)*.25;player.position.x+=side*dt*6;player.position.z-=forward*dt*6;player.rotation.y=Math.atan2(side,forward);player.position.x=THREE.MathUtils.clamp(player.position.x,-82,82);player.position.z=THREE.MathUtils.clamp(player.position.z,-82,82)}
+ if(!len){leftLegGroup.rotation.x=0;rightLegGroup.rotation.x=0;leftArmGroup.rotation.x=0;rightArmGroup.rotation.x=0;}if(spraying){let puff=new THREE.Mesh(new THREE.SphereGeometry(.12+Math.random()*.1,7,6),new THREE.MeshBasicMaterial({color:0xbbeaff,transparent:true,opacity:.55}));let dir=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));puff.position.copy(player.position).add(new THREE.Vector3(0,1.25,0)).add(dir.multiplyScalar(1.1));scene.add(puff);setTimeout(()=>scene.remove(puff),260)}
+
+ ants.forEach(a=>{if(!a.alive)return;a.angle+=dt*a.speed;const n=olheiros[a.nest];if(!n)return;a.obj.position.x=n.group.position.x+Math.cos(a.angle)*a.r;a.obj.position.z=n.group.position.z+Math.sin(a.angle)*a.r;a.obj.position.y=.025;a.obj.rotation.y=-a.angle+Math.PI/2});
+ camera.position.lerp(new THREE.Vector3(player.position.x,player.position.y+8,player.position.z+16),.08);camera.lookAt(player.position.x,1,player.position.z-2);updateHUD();
+ }
+ if(!active){camera.position.lerp(new THREE.Vector3(player.position.x,10,player.position.z+22),.04);camera.lookAt(player.position.x,1,player.position.z-2);}
+ renderer.render(scene,camera);
+}
+function iRand(){return .4}
+updateHUD();loop();addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+})();
+</script>
+</body></html>
